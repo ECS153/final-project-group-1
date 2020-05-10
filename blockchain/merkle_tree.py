@@ -5,18 +5,29 @@ class MerkleTree:
     time.
     """
 
-    def __init__(messages, block_hash, prev_merkle_root):
+    def __init__(messages):
         """
         Constructs Merkle Tree with the following messages, using the 
         concatenation of block_hash and prev_merkle_root as the key.
 
         Args:
         messages: list of 16 messages used to build block.
-        block_hash: the hash that was computed by hash generator
         """
+        pass
 
 
     def verify(msg, idx):
         """
+        Verifies a message at idx was not altered.
 
+        Iterates up the merkle tree, hashing the messages up to the merkle root
+        If matches are correct, returns True.
+
+        Args:
+        msg: Message to verify
+        idk: Index of the message within the merkle tree
+
+        Return:
+        True if the message hasn't been altered. False otherwise.
         """
+        pass
