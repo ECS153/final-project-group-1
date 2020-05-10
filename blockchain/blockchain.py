@@ -1,25 +1,34 @@
 from merkle_tree import MerkleTree
+from time import time
 
 class _node:
     """
     Private class that defines data in a Blockchain node
     """
-    def __init__(messages, block_hash):
+    def __init__(self, messages, nonce, prev_blk_hash)
         """
         Args:
-        Messages = 
+        messages: the messages to be added to the tree
+        nonce: appended to end of messages to generate appropriate blockchain
+        hash. 
+        prev_blk_hash: The hash of the previous block
         """
-        tree = MerkleTree(messages, block_hash)
-        nxt = None
+        self.merkle_root      = MerkleTree(messages)
+        self.prev_block_hash  = prev_blk_hash
+        self.nonce            = nonce
+        self.time_stamp       = time
+        self.nxt              = None
 
 
 class Blockchain:
     """
-    Simple blockchain implementation using a linked list. Supports block
+    Simple blockchain implementation using a singly linked list. Supports block
     insertion and verification of a message based on its index.
     """
 
     ## TODO: Add fields to the constructor
+    ## NOTE: Make sure that when the class it constructed that you are creating
+    ## a default block an inserting it.
     def __init__():
         pass
 
@@ -52,7 +61,14 @@ class Blockchain:
         """
         return True
         
-        
+    def get_hash_latest_block():
+        """
+        Returns the hash of the most recent block in the chain.
 
+        Construct SHA-256 hash of the concatenation of the most recent block's
+        prev_block_hash + merkle_root + nonce
 
-
+        Return:
+        Hash of prev_block_hash + merkle_root + nonce
+        """
+        return ""
