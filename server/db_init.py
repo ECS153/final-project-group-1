@@ -1,8 +1,31 @@
-## Used to instantiate the database. Should only be called once.
+## Used to instantiate the database.
 from hashlib import sha256
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.asymmetric import rsa
+import os
+import sqlite3
 
-user_pass_pairs = [("llee", "eell"), ("hepl", "fake123"), ("bigboi", "hunter2"), ("zman", "phatripz")]
+FILE_NAME = "message.db"
 
-       
+## delete old db file
+try:
+    os.remove(FILE_NAME)
+except:
+    pass
+
+## database data for the users table
+## user, pass, salt
+users= [
+("llee", "eell", "154a0bd031e1a7f2"), 
+("hepl", "fake123", "584ba914cd45ef67"), 
+("bigboi", "hunter2", "1b5384ead392b93f"), 
+("zman", "phatripz", "19fe356ab458e1ab")]
+
+## instantiate users table and add values
+conn = sqlite3.connect(FILE_NAME)
+c = conn.cursor()
+
+c.execute('''CREATE TABLE users
+             (user text, trans text, salt text, hash text)''')
+
+for user in users:
+    ##h = sha256
+##
