@@ -24,8 +24,12 @@ conn = sqlite3.connect(FILE_NAME)
 c = conn.cursor()
 
 c.execute('''CREATE TABLE users
-             (user text, trans text, salt text, hash text)''')
+             (user text, salt text, hash text)''')
 
 for user in users:
-    ##h = sha256
+    h = sha256((user[2]+user[1]).encode()).hexdigest()
+    print(h)
+    c.execute("INSERT INTO users (user, salt, hash)" +
+              f"VALUES ('{user[0]}', '{user[2]}', '{h}')")
+
 ##
