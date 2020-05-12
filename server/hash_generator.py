@@ -23,16 +23,27 @@ def generate_hash(prev_block_hash, merkle_root, num_starting_0s):
     nonce = str(randrange(0, 300001))
     hash_string = prev_block_hash + merkle_root + nonce
     my_hash = sha256(hash_string.encode('utf-8')).hexdigest()
-    num_zeros = make_zeros_str(num_starting_0s)
 
-    if my_hash.startswith(num_zeros):
-        return nonce
-    else:
-        return generate_hash(prev_block_hash, merkle_root, num_starting_0s)
+    while check_zeros(my_hash, num_starting_0s):
+        nonce = str(randrange(0, 300001))
+        hash_string = prev_block_hash + merkle_root + nonce
+        my_hash = sha256(hash_string.encode('utf-8')).hexdigest()
+
+    return nonce
 
 
-def make_zeros_str(num_zero):
-    value = ""
+# function to check condition for while loop
+def check_zeros(my_hash, num_zero):
+
+    if num_zero >= len(my_hash):
+        print("Error: too many zeros wanted")
+        return False
+
     for x in range(num_zero):
-        value = value + "0"
-    return value
+        if my_hash[x] != "0":
+            return True
+
+    if my_hash[num_zero] == "0":
+        return True
+
+    return False
