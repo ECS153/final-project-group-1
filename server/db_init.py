@@ -26,10 +26,13 @@ c = conn.cursor()
 c.execute('''CREATE TABLE users
              (user text, salt text, hash text)''')
 
+## create everyone's hashes
 for user in users:
     h = sha256((user[2]+user[1]).encode()).hexdigest()
     print(h)
     c.execute("INSERT INTO users (user, salt, hash)" +
               f"VALUES ('{user[0]}', '{user[2]}', '{h}')")
 
-##
+## create message table
+c.execute('''CREATE TABLE messages
+             (sender text, recevier text, message text, isSent int)''')
