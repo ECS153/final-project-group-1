@@ -1,3 +1,21 @@
+# Milestone 2
+## Video
+
+## Design Docs
+
+## Meeting Notes
+https://docs.google.com/document/d/1ptGUhw1XonetMxNX3KzEdqZCvcjl_PuefJGZ4JPfokA/edit?usp=sharing
+
+## PRs
+### Heping
+
+### Lawrence
+
+### Darian
+
+### Zach 
+
+
 # Milestone 1
 ## Video
 https://www.youtube.com/watch?v=OGG8BhOcmUQ&feature=youtu.be
