@@ -150,7 +150,8 @@ class Client:
                                response.status_code)
             return
 
-        return response.content
+        decrypted = self._decrypt(response.content)
+        return decrypted
 
     def send_message(self, message: bytes, receiver: str) -> bool:
         """
