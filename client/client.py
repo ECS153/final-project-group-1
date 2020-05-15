@@ -1,7 +1,10 @@
 import logging
 from pathlib import Path
 
-from Crypto.PublicKey.RSA import _RSAobj, importKey
+from cryptography.exceptions import UnsupportedAlgorithm
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
 import requests
 from requests.exceptions import ConnectionError
 
@@ -22,6 +25,11 @@ class Client:
         self._password = password
         self._server_url = server_url
         self._user_name = user_name
+
+    @property
+    def _padding(self) -> padding.AsymmetricPadding:
+        return padding.OAEP(padding.MGF1(hashes.SHA256()), hashes.SHA256(),
+                            None)
 
     @property
     def keys_path(self) -> Path:
@@ -56,7 +64,7 @@ class Client:
         Decrypts a message with the user's decryption key.
         """
         key = self._get_decryption_key()
-        decrypted = key.decrypt(message)
+        decrypted = key.decrypt(message, self._padding)
         return decrypted
 
     def _encrypt(self, message: bytes, receiver: str) -> bytes:
@@ -68,18 +76,18 @@ class Client:
         receiver: The message recipient's user name.
         """
         key = self._get_encryption_key(receiver)
-        encrypted, = key.encrypt(message, None)
+        encrypted = key.encrypt(message, self._padding)
         return encrypted
 
-    def _get_decryption_key(self) -> _RSAobj:
+    def _get_decryption_key(self) -> rsa.RSAPrivateKey:
         """
         Gets the user's decryption key.
         """
         key_file_path = self.keys_path / 'private_{}.pem'.format(
                 self.user_name)
-        return self._get_key(key_file_path)
+        return self._get_key(key_file_path, private=True)
 
-    def _get_encryption_key(self, receiver: str) -> _RSAobj:
+    def _get_encryption_key(self, receiver: str) -> rsa.RSAPublicKey:
         """
         Gets the receiver's encryption key.
 
@@ -89,7 +97,7 @@ class Client:
         key_file_path = self.keys_path / 'public_{}.pem'.format(receiver)
         return self._get_key(key_file_path)
 
-    def _get_key(self, path: Path) -> _RSAobj:
+    def _get_key(self, path: Path, private=False):
         """
         Return:
         The key, or None if failed.
@@ -98,13 +106,22 @@ class Client:
             self._logger.error('Key "%s" is missing.', path.name)
             return None
         try:
-            key_text = path.read_text()
-            key = importKey(key_text)
+            key_bytes = path.read_bytes()
+            if private:
+                key = serialization.load_pem_private_key(
+                        key_bytes, None, default_backend())
+            else:
+                key = serialization.load_pem_public_key(
+                        key_bytes, default_backend())
         except PermissionError as e:
             self._logger.error(e)
             return None
-        except (IndexError, TypeError, ValueError) as e:
+        except (TypeError, UnsupportedAlgorithm, ValueError) as e:
             self._logger.error('Failed to read key. Reason: %s', e)
+            return None
+        if (private and not isinstance(key, rsa.RSAPrivateKey)
+                or not private and not isinstance(key, rsa.RSAPublicKey)):
+            self._logger.error('Unsupported key type %s.', type(key))
             return None
         return key
 
