@@ -135,7 +135,10 @@ class Client:
         Return:
         The message, or ``None`` if no message could be retrieved.
         """
-        headers = {}
+        headers = {'sender': self.user_name,
+                   'receiver': sender,
+                   'password': self.password}
+
 
         try:
             response = requests.get(self.server_url, headers=headers)
@@ -150,7 +153,12 @@ class Client:
                                response.status_code)
             return
 
-        decrypted = self._decrypt(response.content)
+        try:
+            decrypted = self._decrypt(response.content)
+        except Exception as e:
+            self._logger.error('Failed to decrypt message. %s', e)
+            return None
+
         return decrypted
 
     def send_message(self, message: bytes, receiver: str) -> bool:
@@ -168,7 +176,11 @@ class Client:
                    'receiver': receiver,
                    'password': self.password}
 
-        msg_encrypted = self._encrypt(message, receiver)
+        try:
+            msg_encrypted = self._encrypt(message, receiver)
+        except Exception as e:
+            self._logger.error('Failed to encrypt message. %s', e)
+            return False
 
         try:
             response = requests.put(self.server_url, data=msg_encrypted,
