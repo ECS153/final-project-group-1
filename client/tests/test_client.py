@@ -15,6 +15,7 @@ message = ''
 password = ''
 url = 'http://server.com'
 user_name = ''
+users = ['bigboi', 'hepl', 'llee', 'zman']
 
 
 class Context:
@@ -49,13 +50,18 @@ def encrypt(msg: bytes, user: str):
 
 
 def get_content(request: PreparedRequest, context: Context):
+    headers = request.headers
+    check_headers(headers)
+    if headers['receiver'] not in users or headers['sender'] not in users:
+        context.status_code = 404
+        context.reason = 'User not found.'
+        return b''
     encrypted = encrypt(message.encode(), user_name)
     return encrypted
 
 
 def receive_message(client: Client):
-    received_message = client.get_message(friend_name)
-    assert received_message.decode() == message
+    return client.get_message(friend_name)
 
 
 def get_padding() -> padding.AsymmetricPadding:
@@ -71,14 +77,19 @@ def new_client() -> Client:
 
 
 def put_content(request: PreparedRequest, context: Context):
-    check_headers(request.headers)
+    headers = request.headers
+    check_headers(headers)
+    if headers['receiver'] not in users or headers['sender'] not in users:
+        context.status_code = 404
+        context.reason = 'User not found.'
+        return b''
     content = request.body
     decrypted = decrypt(content, friend_name)
     assert decrypted.decode() == message
 
 
 def send_message(client: Client):
-    client.send_message(message.encode(), friend_name)
+    return client.send_message(message.encode(), friend_name)
 
 
 def set_globals(l_user_name=user_name, l_friend_name=friend_name,
@@ -99,37 +110,81 @@ def mock_server(requests_mock: Mocker):
     requests_mock.put(url, content=put_content)
 
 
+def test_put_server_error(requests_mock: Mocker):
+    requests_mock.put(url, status_code=404)
+    set_globals('llee', 'zman', 'pwd1', 'Hello world!')
+    client = new_client()
+    assert False == send_message(client)
+
+
 def test_put_1():
     set_globals('llee', 'zman', 'pwd1', 'Hello world!')
     client = new_client()
-    send_message(client)
+    assert True == send_message(client)
 
 
 def test_put_2():
     set_globals('hepl', 'hepl', 'pwd2', 'test_put_2')
     client = new_client()
-    send_message(client)
+    assert True == send_message(client)
 
 
 def test_put_3():
     set_globals('zman', 'bigboi', 'pwd3', 'qwerty')
     client = new_client()
-    send_message(client)
+    assert True == send_message(client)
+
+
+def test_put_fail_unknown_friend():
+    set_globals('llee', 'foo', 'pwd', 'asdf')
+    client = new_client()
+    assert False == send_message(client)
+
+
+def test_put_fail_unknown_user():
+    set_globals('foo', 'llee', 'pwd', 'asdf')
+    client = new_client()
+    assert False == send_message(client)
+
+
+def test_get_server_error(requests_mock: Mocker):
+    requests_mock.get(url, status_code=404)
+    set_globals('llee', 'zman', 'pwd1', 'Hello world!')
+    client = new_client()
+    received = receive_message(client)
+    assert received == None
 
 
 def test_get_1():
     set_globals('llee', 'zman', 'pwd1', 'Hello world!')
     client = new_client()
-    receive_message(client)
+    received = receive_message(client)
+    assert received.decode() == message
 
 
 def test_get_2():
     set_globals('hepl', 'hepl', 'pwd2', 'test_put_2')
     client = new_client()
-    receive_message(client)
+    received = receive_message(client)
+    assert received.decode() == message
 
 
 def test_get_3():
     set_globals('zman', 'bigboi', 'pwd3', 'qwerty')
     client = new_client()
-    receive_message(client)
+    received = receive_message(client)
+    assert received.decode() == message
+
+
+def test_get_fail_unknown_friend():
+    set_globals('llee', 'foo', 'pwd', 'asdf')
+    client = new_client()
+    received = receive_message(client)
+    assert received == None
+
+
+def test_get_fail_unknown_user():
+    set_globals('foo', 'llee', 'pwd', 'asdf')
+    client = new_client()
+    received = receive_message(client)
+    assert received == None
