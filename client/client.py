@@ -1,5 +1,8 @@
 import logging
 from pathlib import Path
+from queue import Queue
+from threading import Event, Thread
+from typing import Callable
 
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
@@ -22,9 +25,9 @@ class Client:
         logger_name: The name of the logger to use.
         """
         self._logger = logging.getLogger(logger_name)
-        self._password = password
-        self._server_url = server_url
-        self._user_name = user_name
+        self.password = password
+        self.server_url = server_url
+        self.user_name = user_name
 
     @property
     def _padding(self) -> padding.AsymmetricPadding:
@@ -139,7 +142,6 @@ class Client:
                    'receiver': sender,
                    'password': self.password}
 
-
         try:
             response = requests.get(self.server_url, headers=headers)
         except ConnectionError as e:
@@ -197,6 +199,271 @@ class Client:
             return False
 
         return True
+
+
+class Message:
+    """
+    A byte message wrapper with some metadata.
+    """
+    def __init__(self, user_from: str, user_to: str, message: bytes):
+        self._from = user_from
+        self._to = user_to
+        self._messsage = message
+
+    @property
+    def message(self):
+        return self._messsage
+
+    @property
+    def user_from(self):
+        """
+        The username of the person sending the message.
+        """
+        return self._from
+
+    @property
+    def user_to(self):
+        """
+        The username of the person receiving the message.
+        """
+        return self._to
+
+
+class AsyncClient(Client):
+    def __init__(self, server_url: str, user_name: str, password: str,
+                 poll_period: float = 1.0, logger_name=None):
+        """
+        Creates a new asynchronous client which can communicate with a server.
+        This client has two threads dedicated for sending and receiving
+        messages. The client must be started before any messages are sent or
+        received.
+
+        Args:
+        server_url: The server's url. Example: 'https://server.com'
+        user_name: The user's user name.
+        password: The user's password.
+        poll_period: Time in seconds to wait before polling the server for new
+        incoming messages.
+        logger_name: The name of the logger to use.
+        """
+        self._receiver = ReceiverThread(self)
+        self._sender = SenderThread(self)
+        self.poll_period = poll_period
+        super().__init__(server_url, user_name, password,
+                         logger_name=logger_name)
+
+    @property
+    def incoming_messages(self) -> Queue:
+        """
+        A buffer containing received messages in the form of ``Message``s.
+        """
+        return self._receiver.buffer
+
+    @property
+    def poll_period(self) -> float:
+        return self._receiver.poll_period
+
+    @poll_period.setter
+    def poll_period(self, period: float):
+        """
+        Time in seconds to wait before polling the server for new incoming
+        messages. Setting the period resets the time.
+        """
+        if period < 0:
+            raise ValueError('Polling period must be non-negative.')
+        self._receiver.poll_period = period
+
+    def enqueue_message(self, message: Message):
+        """
+        Queue a message to be sent.
+        """
+        self._sender.enqueue(message)
+
+    @property
+    def on_new_message(self) -> Callable[[], None]:
+        return self._receiver.callback
+
+    @on_new_message.setter
+    def on_new_message(self, function: Callable[[], None]):
+        """
+        Called whenever a new message has been received.
+        """
+        self._receiver.callback = function
+
+    @property
+    def user_from(self) -> str:
+        return self._receiver.user_from
+
+    @user_from.setter
+    def user_from(self, user_from: str):
+        self._receiver.user_from = user_from
+
+    @Client.user_name.setter
+    def user_name(self, user_name: str):
+        # Ugly way to call the base class's setter. See
+        # https://stackoverflow.com/questions/10810369/python-super-and-setting-parent-class-property.
+        super(AsyncClient, self.__class__).user_name.fset(self, user_name)
+        self._receiver.user_from = user_name
+
+    def quit(self):
+        """
+        Stops the client's sending and receiving threads. They cannot be
+        restarted.
+        """
+        self._receiver.request_quit()
+        self._sender.request_quit()
+        self._receiver.join()
+        self._sender.join()
+
+    def start(self):
+        """
+        Starts the client's sending and receiving threads.
+        """
+        self._receiver.start()
+        self._sender.start()
+
+
+class QuittableThread(Thread):
+    def __init__(self, client: Client):
+        """
+        Constructs a thread which you can request to quit. Child classes can
+        wait on this class's event property to facilitate fast quitting in the
+        case when the thread needs to sleep. This is because the event is
+        triggered immediately after a request to quit.
+        """
+        super().__init__()
+        self._client = client
+        self._event = Event()
+        self._quit_requested = False
+
+    @property
+    def event(self):
+        return self._event
+
+    @property
+    def quit_requested(self):
+        return self._quit_requested
+
+    def start(self):
+        self.event.clear()
+        super().start()
+
+    def request_quit(self):
+        self._quit_requested = True
+        self._event.set()
+
+
+class ReceiverThread(QuittableThread):
+    def __init__(self, client: Client, poll_period: float = 1.0):
+        """
+        Construct a thread which periodically receives messages through a
+        client.
+
+        Args:
+        client: The client used for receiving messages.
+        poll_period: Time in seconds to wait before polling the server for new
+        incoming messages.
+        """
+        super().__init__(client)
+        self._callback = None
+        self._queue = Queue()
+        self._from = None
+        self.poll_period = poll_period
+
+    @property
+    def buffer(self) -> Queue:
+        """
+        A queue containing received messages.
+        """
+        return self._queue
+
+    @property
+    def callback(self) -> Callable[[], None]:
+        return self._callback
+
+    @callback.setter
+    def callback(self, func: Callable[[], None]):
+        """
+        A function which is called when a new message is received.
+        """
+        self._callback = func
+
+    @property
+    def poll_period(self) -> float:
+        return self._poll_period
+
+    @poll_period.setter
+    def poll_period(self, period: float):
+        """
+        Time in seconds to wait before polling the server for new incoming
+        messages. Setting the period resets the timer.
+        """
+        if period < 0:
+            raise ValueError('Polling period must be non-negative.')
+        self._poll_period = period
+        self.event.set()
+
+    @property
+    def user_from(self) -> str:
+        return self._from
+
+    @user_from.setter
+    def user_from(self, user_from: str):
+        self._from = user_from
+
+    def run(self):
+        while not self.quit_requested:
+            user_from = self.user_from  # Take snapshot for thread safety.
+
+            # Try to get a message.
+            if user_from is None:
+                msg = None
+            else:
+                msg = self._client.get_message(user_from)
+
+            # Process the message if there is one.
+            if msg is not None:
+                message = Message(user_from, self._client.user_name, msg)
+                self._queue.put(message)
+                if self.callback is not None:
+                    self.callback()
+
+            # Interruptible sleep.
+            event_set = True
+            while event_set and not self.quit_requested:
+                event_set = self.event.wait(self.poll_period)
+            self.event.clear()
+
+
+class SenderThread(QuittableThread):
+    def __init__(self, client: Client):
+        """
+        Construct a thread which sends messages through a client. Quits only
+        when quit has been requested and all queued messages have been sent.
+
+        Args:
+        client: The client used for sending messages.
+        """
+        super().__init__(client)
+        self._queue = Queue()
+
+    def run(self):
+        while not self._queue.empty() or not self.quit_requested:
+            while self._queue.empty() and not self.quit_requested:
+                self._event.wait()
+            self._event.clear()
+            if not self._queue.empty():
+                msg = self._queue.get()
+                success = self._client.send_message(msg.message, msg.user_to)
+                if not success:
+                    self._queue.put(msg)
+
+    def enqueue(self, message: Message):
+        """
+        Queue a message to be sent.
+        """
+        self._queue.put(message)
+        self._event.set()
 
 
 def main():
