@@ -104,7 +104,7 @@ def receive_message(client: Client):
 
 
 def receive_messages_async(client: AsyncClient, message_count: int,
-                           timeout: float = 1):
+                           timeout: float = 4):
     start = datetime.now()
     while (client.incoming_messages.qsize() < message_count
            and (datetime.now() - start).total_seconds() < timeout):
@@ -205,37 +205,37 @@ def test_put_server_error(requests_mock: Mocker):
     requests_mock.put(url, status_code=404)
     set_globals('llee', 'zman', 'pwd1', 'Hello world!')
     client = new_client()
-    assert False == send_message(client)
+    assert not send_message(client)
 
 
 def test_put_1():
     set_globals('llee', 'zman', 'pwd1', 'Hello world!')
     client = new_client()
-    assert True == send_message(client)
+    assert send_message(client)
 
 
 def test_put_2():
     set_globals('hepl', 'hepl', 'pwd2', 'test_put_2')
     client = new_client()
-    assert True == send_message(client)
+    assert send_message(client)
 
 
 def test_put_3():
     set_globals('zman', 'bigboi', 'pwd3', 'qwerty')
     client = new_client()
-    assert True == send_message(client)
+    assert send_message(client)
 
 
 def test_put_fail_unknown_friend():
     set_globals('llee', 'foo', 'pwd', 'asdf')
     client = new_client()
-    assert False == send_message(client)
+    assert not send_message(client)
 
 
 def test_put_fail_unknown_user():
     set_globals('foo', 'llee', 'pwd', 'asdf')
     client = new_client()
-    assert False == send_message(client)
+    assert not send_message(client)
 
 
 def test_get_server_error(requests_mock: Mocker):
@@ -243,7 +243,7 @@ def test_get_server_error(requests_mock: Mocker):
     set_globals('llee', 'zman', 'pwd1', 'Hello world!')
     client = new_client()
     received = receive_message(client)
-    assert received == None
+    assert received is None
 
 
 def test_get_1():
@@ -271,14 +271,14 @@ def test_get_fail_unknown_friend():
     set_globals('llee', 'foo', 'pwd', 'asdf')
     client = new_client()
     received = receive_message(client)
-    assert received == None
+    assert received is None
 
 
 def test_get_fail_unknown_user():
     set_globals('foo', 'llee', 'pwd', 'asdf')
     client = new_client()
     received = receive_message(client)
-    assert received == None
+    assert received is None
 
 
 def test_async_put_1():
