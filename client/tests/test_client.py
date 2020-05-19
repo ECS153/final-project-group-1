@@ -299,7 +299,7 @@ def test_async_get_1():
     messages_in = create_messages(friend_name, user_name, ['msg1', 'msg2'])
     set_globals(user_name, friend_name, 'pwd1', '', True, messages_in, [])
     client = new_async_client()
-    client.user_name = friend_name
+    client.receive_from = friend_name
     client.start()
     receive_messages_async(client, len(messages_in))
     client.quit()
@@ -314,7 +314,7 @@ def test_async_get_put_1():
     set_globals(user_name, friend_name, 'pwd1', '', True, messages_in,
                 messages_out)
     client = new_async_client()
-    client.user_name = friend_name
+    client.receive_from = friend_name
     client.start()
     send_messages_async(client)
     receive_messages_async(client, len(messages_in))

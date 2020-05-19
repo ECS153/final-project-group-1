@@ -291,19 +291,12 @@ class AsyncClient(Client):
         self._receiver.callback = function
 
     @property
-    def user_from(self) -> str:
+    def receive_from(self) -> str:
         return self._receiver.user_from
 
-    @user_from.setter
-    def user_from(self, user_from: str):
+    @receive_from.setter
+    def receive_from(self, user_from: str):
         self._receiver.user_from = user_from
-
-    @Client.user_name.setter
-    def user_name(self, user_name: str):
-        # Ugly way to call the base class's setter. See
-        # https://stackoverflow.com/questions/10810369/python-super-and-setting-parent-class-property.
-        super(AsyncClient, self.__class__).user_name.fset(self, user_name)
-        self._receiver.user_from = user_name
 
     def quit(self):
         """
