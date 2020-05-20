@@ -1,19 +1,24 @@
 # Milestone 2
 ## Video
 
-## Design Docs
+## New Design Docs
+### Client Design Doc
+https://docs.google.com/document/d/1uuWtZ_WlORaCHqvfoVyy2kddN_-l-5EShkVs6VJQvh0/edit?usp=sharing
 
 ## Meeting Notes
 https://docs.google.com/document/d/1ptGUhw1XonetMxNX3KzEdqZCvcjl_PuefJGZ4JPfokA/edit?usp=sharing
 
 ## PRs
-### Heping
+### Heping (Send unreceived messages to client)
+https://github.com/ECS153/final-project-group-1/pull/7
 
-### Lawrence
+### Lawrence (Client send and receive threads, added decrpytion)
+https://github.com/ECS153/final-project-group-1/pull/5
 
-### Darian
+### Darian (Collect message sent from client, write into database)
+https://github.com/ECS153/final-project-group-1/pull/6
 
-### Zach 
+### Zach (Set Up Interface for Blockchain)
 
 
 # Milestone 1
