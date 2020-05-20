@@ -1,5 +1,6 @@
 # Milestone 2
 ## Video
+https://www.youtube.com/watch?v=1KWM57SjoOk&feature=youtu.be
 
 ## New Design Docs
 ### Client Design Doc
@@ -18,7 +19,9 @@ https://github.com/ECS153/final-project-group-1/pull/5
 ### Darian (Collect message sent from client, write into database)
 https://github.com/ECS153/final-project-group-1/pull/6
 
-### Zach (Set Up Interface for Blockchain)
+### Zach (Transaction upload to Etherium test net)
+https://github.com/ECS153/final-project-group-1/pull/8
+
 
 
 # Milestone 1
