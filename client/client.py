@@ -1,3 +1,4 @@
+from base64 import b64encode
 import logging
 from pathlib import Path
 from queue import Queue
@@ -163,6 +164,28 @@ class Client:
 
         return decrypted
 
+    def _message_to_request_body(self, message: bytes, receiver: str) -> dict:
+        """
+        Creates a HTTP put request body for sending a message.
+
+        Return:
+        The body, or None upon failure.
+        """
+        msg_encrypted = {}
+        try:
+            msg_encrypted[receiver] = self._encrypt(message, receiver)
+            msg_encrypted[self.user_name] = self._encrypt(message,
+                                                          self.user_name)
+        except Exception as e:
+            self._logger.error('Failed to encrypt message. %s', e)
+            return None
+
+        body = {}
+        for username, msg in msg_encrypted.items():
+            body[username] = b64encode(msg).decode()
+
+        return body
+
     def send_message(self, message: bytes, receiver: str) -> bool:
         """
         Encrypts and sends a message to the server.
@@ -178,14 +201,13 @@ class Client:
                    'receiver': receiver,
                    'password': self.password}
 
-        try:
-            msg_encrypted = self._encrypt(message, receiver)
-        except Exception as e:
-            self._logger.error('Failed to encrypt message. %s', e)
+        request_body = self._message_to_request_body(message, receiver)
+        if (request_body == None):
+            self._logger.error('Failed to generate request body.')
             return False
 
         try:
-            response = requests.put(self.server_url, data=msg_encrypted,
+            response = requests.put(self.server_url, data=request_body,
                                     headers=headers)
         except ConnectionError as e:
             self._logger.error('Connection error: %s', e)
