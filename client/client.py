@@ -460,6 +460,8 @@ class ReceiverThread(QuittableThread):
                 msgs = []
             else:
                 msgs = self._client.get_messages(user_from)
+            if msgs is None:
+                msgs = []
 
             # Process the messages if there are any.
             for message in msgs:
