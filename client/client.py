@@ -503,24 +503,3 @@ class SenderThread(QuittableThread):
         """
         self._queue.put(message)
         self._event.set()
-
-
-def main():
-    logger_name = 'client'
-    log_level = logging.DEBUG
-    logger = logging.getLogger(logger_name)
-    logger.setLevel(log_level)
-    logging.basicConfig()
-
-    user = 'llee'
-    pwd = 'eell'
-    friend = 'llee'
-    message = '<message>'
-    client = Client('http://localhost:5001', user, pwd, logger_name)
-    client.send_message(message.encode(), friend)
-    incoming_msg = client.get_message(friend)
-    print('Received message: "{}"'.format(incoming_msg.decode()))
-
-
-if __name__ == '__main__':
-    main()
