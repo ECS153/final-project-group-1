@@ -250,6 +250,12 @@ def set_globals(l_user_name=user_name, l_friend_name=friend_name,
 
 
 @pytest.fixture(autouse=True)
+def init():
+    global users
+    users = ['bigboi', 'hepl', 'llee', 'zman']
+
+
+@pytest.fixture(autouse=True)
 def mock_server(requests_mock: Mocker):
     global messages_received
     global messages_sent
@@ -284,14 +290,28 @@ def test_put_3():
     assert send_message(client)
 
 
-def test_put_fail_unknown_friend():
+def test_put_fail_unknown_friend_1():
     set_globals('llee', 'foo', 'pwd', 'asdf')
     client = new_client()
     assert not send_message(client)
 
 
-def test_put_fail_unknown_user():
+def test_put_fail_unknown_friend_2():
+    set_globals('llee', 'hepl', 'pwd', 'asdf')
+    users.remove('hepl')
+    client = new_client()
+    assert not send_message(client)
+
+
+def test_put_fail_unknown_user_1():
     set_globals('foo', 'llee', 'pwd', 'asdf')
+    client = new_client()
+    assert not send_message(client)
+
+
+def test_put_fail_unknown_user_2():
+    set_globals('llee', 'hepl' 'pwd', 'asdf')
+    users.remove('llee')
     client = new_client()
     assert not send_message(client)
 
