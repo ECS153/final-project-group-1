@@ -366,6 +366,48 @@ def test_async_get_1():
     check_messages_in(flatten(messages_in))
 
 
+def test_async_get_2():
+    user_name = 'llee'
+    friend_name = 'zman'
+    messages_in = create_messages_in(friend_name, user_name,
+                                     [['msg1'], ['msg2', 'msg3']])
+    set_globals(user_name, friend_name, 'pwd1', '', True, messages_in, [])
+    client = new_async_client()
+    client.receive_from = friend_name
+    client.start()
+    receive_messages_async(client, len(flatten(messages_in)))
+    client.quit()
+    check_messages_in(flatten(messages_in))
+
+
+def test_async_get_3():
+    user_name = 'llee'
+    friend_name = 'zman'
+    messages_in = create_messages_in(friend_name, user_name,
+                                     [['msg1'], [], ['msg2', 'msg3']])
+    set_globals(user_name, friend_name, 'pwd1', '', True, messages_in, [])
+    client = new_async_client()
+    client.receive_from = friend_name
+    client.start()
+    receive_messages_async(client, len(flatten(messages_in)))
+    client.quit()
+    check_messages_in(flatten(messages_in))
+
+
+def test_async_get_4():
+    user_name = 'llee'
+    friend_name = 'llee'
+    messages_in = create_messages_in(friend_name, user_name,
+                                     [['msg1'], ['msg2']])
+    set_globals(user_name, friend_name, 'pwd1', '', True, messages_in, [])
+    client = new_async_client()
+    client.receive_from = friend_name
+    client.start()
+    receive_messages_async(client, len(flatten(messages_in)))
+    client.quit()
+    check_messages_in(flatten(messages_in))
+
+
 def test_async_get_put_1():
     user_name = 'bigboi'
     friend_name = 'hepl'
