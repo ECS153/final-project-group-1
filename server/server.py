@@ -1,14 +1,115 @@
 from http.server import HTTPServer
 from http.server import BaseHTTPRequestHandler
+from hashlib import sha256
 import sqlite3
+import json
 
 PORT = 5001
+
 
 class BlockchainClientHandler(BaseHTTPRequestHandler):
     """
 
     """
-    def do_GET(r):
+
+    def get_unread_messages(self, user, contact):
+        conn = sqlite3.connect("message.db")
+        c = conn.cursor()
+
+        sql_read_query = """SELECT * FROM messages WHERE
+                                receiver=?
+                                AND sender=? 
+                                AND isSent=?"""
+
+        c.execute(sql_read_query, (user, contact, 0))
+        data = c.fetchall()
+
+        # turn data into list of dictionary
+        for i in range(len(data)):
+            data[i] = {
+                "timestamp": data[i][4],
+                "sender": data[i][0],
+                "message": data[i][2]
+            }
+
+        # sort by timestamp ascending value
+        length = len(data)
+        j = 0
+        while j < length - 1:
+            if data[j]["timestamp"] > data[j + 1]["timestamp"]:
+                temp = data[j]
+                data[j] = data[j + 1]
+                data[j + 1] = temp
+                j = -1
+            j += 1
+
+        sql_update_query = """Update messages SET isSent=1 WHERE
+                                receiver=?
+                                AND sender=? 
+                                AND isSent=?"""
+
+        c.execute(sql_update_query, (user, contact, 0))
+        conn.commit()
+        c.close()
+        conn.close()
+
+        return json.dumps(data)
+
+    def get_history(self, user, contact):
+        conn = sqlite3.connect("message.db")
+        c = conn.cursor()
+
+        sql_read_query = """SELECT * FROM messages WHERE
+                                        receiver=?
+                                        AND sender=?"""
+
+        c.execute(sql_read_query, (user, contact))
+        data_user = c.fetchall()
+
+        c.execute(sql_read_query, (contact, user))
+        data_contact = c.fetchall()
+
+        data = data_user + data_contact
+
+        for i in range(len(data)):
+            data[i] = {
+                "timestamp": data[i][4],
+                "sender": data[i][0],
+                "message": data[i][2]
+            }
+
+        length = len(data)
+        j = 0
+        while j < length - 1:
+            if data[j]["timestamp"] > data[j + 1]["timestamp"]:
+                temp = data[j]
+                data[j] = data[j + 1]
+                data[j + 1] = temp
+                j = -1
+            j += 1
+
+        c.close()
+        conn.close()
+
+        return json.dumps(data)
+
+    def authenticate_password(self, user, password):
+        conn = sqlite3.connect("message.db")
+        c = conn.cursor()
+
+        my_salt = c.execute("SELECT salt FROM users WHERE user=?", user)
+        my_hash = c.execute("SELECT hash FROM users WHERE user=?", user)
+        c.close()
+        conn.close()
+
+        made_hash = sha256((my_salt + password).encode()).hexdigest()
+
+        if made_hash == my_hash:
+            return False
+
+        return True
+
+    def do_GET(self, r):
         """
         arg: a get request
 
@@ -23,31 +124,20 @@ class BlockchainClientHandler(BaseHTTPRequestHandler):
         r.send_response(200)
         r.end_headers()
         user = r.headers['user_name']
-        conn = sqlite3.connect("message.db")
-        c = conn.cursor()
+        contact = r.headers['contact']
+        unread = r.headers['contact']
+        password = r.headers['password']
 
-        sql_read_query = """SELECT message FROM messages WHERE receiver=? 
-                AND isSent=?"""
+        if self.authenticate_password(user, password):
+            print("Error: wrong password")
+            return
 
-        c.execute(sql_read_query, (user, 0))
-        data = c.fetchall()
+        if unread:
+            response = self.get_unread_messages(user, contact)
+        else:
+            response = self.get_history(user, contact)
 
-        for i in range(len(data)):
-            data[i] = data[i][0]
-
-        sql_update_query = """Update messages SET isSent=1 WHERE receiver=? 
-                AND isSent=?"""
-
-        c.execute(sql_update_query, (user, 0))
-        conn.commit()
-        c.close()
-        conn.close()
-
-        messages: str = ""
-        for msg in data:
-            messages += msg + "\n"
-
-        r.wfile.write(bytes(messages, "utf8"))
+        r.wfile.write(bytes(response, "utf8"))
 
     def do_PUT(r):
         print("Sender: "+r.headers["sender"])
@@ -57,6 +147,7 @@ class BlockchainClientHandler(BaseHTTPRequestHandler):
         r.send_response(200)
         r.end_headers()
         r.wfile.write(b"Received all the headers!")
+
 
 def main():
     """
