@@ -106,6 +106,8 @@ class GUI(tk.Frame):
 
     def _init_messages(self, user_name: str, frame: tk.Frame):
         msgs = self._client.get_messages(user_name, unread='false')
+        if msgs is None:
+            msgs = []
         for msg in msgs:
             message = msg.message
             if msg.user_from == self._client.user_name:
