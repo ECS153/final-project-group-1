@@ -2,7 +2,7 @@ import logging
 
 import tkinter as tk
 
-from .client import AsyncClient, Message
+from client import AsyncClient, Message
 
 
 class FrameScrollableV(tk.Frame):
@@ -107,11 +107,9 @@ class GUI(tk.Frame):
         for msg in msgs:
             message = msg.message
             if msg.user_from == self._client.user_name:
-                label = tk.Label(self.messages_sub_frames[self._to].frame,
-                                 anchor='e')
+                label = tk.Label(frame, anchor='e')
             else:
-                label = tk.Label(self.messages_sub_frames[self._to].frame,
-                                 anchor='w')
+                label = tk.Label(frame, anchor='w')
             label['text'] = message.decode()
             label.pack(expand=0, fill='x', side='bottom')
 
