@@ -1,3 +1,5 @@
+import argparse
+from getpass import getpass
 import logging
 
 import tkinter as tk
@@ -155,12 +157,36 @@ class GUI(tk.Frame):
         self.input.delete(0, 'end')
 
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('username', choices=['bigboi', 'hepl', 'llee', 'zman'],
+                        help='username')
+    parser.add_argument('-u', '--url', default='http://localhost:5001',
+                        help='server url')
+    parser.add_argument('-p', '--poll_period', default=2, type=int,
+                        help='time, in seconds, between each check for new '
+                        'messages')
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        help='show logging')
+    parser.add_argument('-d', '--debug', action='store_true',
+                        help='show logging at the debug level')
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
+    password = getpass()
+
     logger_name = 'client'
-    logging.getLogger(logger_name).setLevel(logging.DEBUG)
+    if args.debug:
+        logging.getLogger(logger_name).setLevel(logging.DEBUG)
+    elif args.verbose:
+        logging.getLogger(logger_name).setLevel(logging.WARNING)
+    else:
+        logging.getLogger(logger_name).setLevel(logging.CRITICAL)
     logging.basicConfig()
-    client = AsyncClient('http://localhost:5001', 'llee', 'eell',
-                         poll_period=10, logger_name=logger_name)
+    client = AsyncClient(args.url, args.username, password,
+                         poll_period=args.poll_period, logger_name=logger_name)
 
     root = tk.Tk()
     root.minsize(406, 300)
