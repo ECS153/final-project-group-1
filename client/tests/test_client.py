@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 from time import sleep
 from typing import List
-import urllib
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
@@ -187,11 +186,6 @@ def new_client() -> Client:
     return Client(url, user_name, password)
 
 
-def parse_body(body: str):
-    # https://stackoverflow.com/questions/48018622/how-can-see-the-request-data#51052385
-    return dict(urllib.parse.parse_qsl(body))
-
-
 def put_content(request: PreparedRequest, context: Context):
     headers = request.headers
     if test_async:
@@ -203,7 +197,7 @@ def put_content(request: PreparedRequest, context: Context):
         context.reason = 'User not found.'
         return b''
 
-    content: dict = parse_body(request.body)
+    content = json.loads(request.body)
     assert friend_name in content
     assert user_name in content
     assert len(content.keys()) == len(set([friend_name, user_name]))
