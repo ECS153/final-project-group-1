@@ -162,8 +162,9 @@ class MerkleChainClientHandler(BaseHTTPRequestHandler):
         # Query the message table
         conn = sqlite3.connect('message.db')
         c = conn.cursor()
-        ## index our message
-        blk_idx, merkle_idx = get_latest_msg_idx()
+        
+        ## TODO: Reintegrate this stuff once server can send and receive message properly
+        ##blk_idx, merkle_idx = get_latest_msg_idx()
         with conn:
             c.execute("INSERT INTO messages VALUES \
             (:sender, :receiver, :message, :isSent, :sent)",
