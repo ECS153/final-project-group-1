@@ -4,7 +4,9 @@ from hashlib import sha256
 import sqlite3
 import json
 import time
-from hash_generator
+from hashgenerator import generate_hash
+from merklechain import MerkleChain
+from merkletree import MerkleTree
 
 PORT = 5001
 
@@ -110,7 +112,7 @@ class MerkleChainClientHandler(BaseHTTPRequestHandler):
 
         return made_hash == my_hash
 
-    def do_GET(self, r):
+    def do_GET(r):
         """
         arg: a get request
 
@@ -129,7 +131,7 @@ class MerkleChainClientHandler(BaseHTTPRequestHandler):
         unread = r.headers['contact']
         password = r.headers['password']
 
-        if not self.authenticate_password(user, password):
+        if not r.authenticate_password(user, password):
             print("Error: wrong password")
             return
 
@@ -150,7 +152,7 @@ class MerkleChainClientHandler(BaseHTTPRequestHandler):
         print("Message: "+message)
         r.send_response(200)
         r.end_headers()
-        if not self.authenticate_password(sender, r.headers["password"]:
+        if not r.authenticate_password(sender, r.headers["password"]):
             print("Return password")
             return
 
