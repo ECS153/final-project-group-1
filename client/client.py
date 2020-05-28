@@ -1,4 +1,5 @@
 from base64 import b64decode, b64encode
+import json
 import logging
 from pathlib import Path
 from queue import Queue
@@ -210,7 +211,7 @@ class Client:
         for username, msg in msg_encrypted.items():
             body[username] = b64encode(msg).decode()
 
-        return body
+        return json.dumps(body)
 
     def _response_to_messages(self, response: Response) -> List[Message]:
         """
