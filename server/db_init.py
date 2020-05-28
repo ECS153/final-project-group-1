@@ -34,6 +34,6 @@ for user in users:
 ## create message table
 ## TODO: Add indexing fields
 c.execute('''CREATE TABLE messages
-             (sender text, receiver text, message text, isSent int, sent int)''')
+             (sender text, receiver text, isSent int, sent int, sender_msg text, receiver_msg text)''')
 conn.commit()
 c.close()

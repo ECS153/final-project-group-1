@@ -151,6 +151,18 @@ class MerkleChainClientHandler(BaseHTTPRequestHandler):
         print("Receiver: "+receiver)
         print("Password: "+r.headers["password"])
         print("Message: "+message)
+        
+        ## clean JSON string, isolate messages
+        message = message.replace("=", "")
+        message = message.replace(receiver, "")
+        message = message.replace(" ", "")
+        message = message.replace(":", "")
+        message = message.replace('"', "")
+        message = message.replace(sender, "")
+        message = message.replace("{", "")
+        message = message.replace("}", "")
+        message = message.split(",")
+        print("Split", message)
         r.send_response(200)
         r.end_headers()
         if not r.authenticate_password(sender, r.headers["password"]):
@@ -168,10 +180,10 @@ class MerkleChainClientHandler(BaseHTTPRequestHandler):
         ##blk_idx, merkle_idx = get_latest_msg_idx()
         with conn:
             c.execute("INSERT INTO messages VALUES \
-            (:sender, :receiver, :message, :isSent, :sent)",
+            (:sender, :receiver, :isSent, :sent, :sender_msg, :receiver_msg)",
             {'sender': sender, 'receiver': receiver,
-            'message': message, 'isSent': 0, 'sent': sent})
-        print("Printing what was inputting in the db: ", c.fetchall())
+             'isSent': 0, 'sent': sent,
+            'sender_msg': message[1], 'receiver_msg': message[0]})
         conn.commit()
         conn.close()
 
