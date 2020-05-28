@@ -23,7 +23,7 @@ class MerkleChain:
         self.latest_block_idx += 1
         return self.latest_block_idx
 
-    def getLatestBlockHash():
+    def get_latest_block_hash():
         return sha256(self.prev_hash + self.last.tree.getMerkleRoot() + str(self.nonce))
 
 m = MerkleChain()

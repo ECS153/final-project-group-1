@@ -35,4 +35,4 @@ for user in users:
 
 ## create message table
 c.execute('''CREATE TABLE messages
-             (sender text, recevier text, message text, isSent int)''')
+             (sender text, recevier text, message text, isSent int, blk_idx int, merkle_idx int, sent int)''')
