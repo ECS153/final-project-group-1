@@ -2,16 +2,41 @@ from hashlib import sha256
 from math import log
 
 class MerkleTree:
-    _NUM_NODES = 8    
-    _ARRAY_SIZE = 15
+    """
+    Array based merkle tree implementation. Can be adjusted for larger block 
+    sizes (powers of 2). Allows for quick verification of message given it's 
+    array index when passed into the tree constructor
+    """
+    ## number of messages must be power of 2
+    _NUM_NODES = 2**3    
+    ## Array size based on number of messages allowed
+    _ARRAY_SIZE = 2**(3+1) - 1
 
     def __init__(self, messages):
+        """
+        Checks that correct number of messages are passed in, then constructs 
+        tree.
+        """
         if (len(messages) != 8):
             print("This implementation requires block size of",MerkleTree._NUM_NODES, "messages!")
             return
         self.tree = self._construct_tree(messages)
 
     def _construct_tree(self, messages):
+        """
+        Creates a merkle tree from the array of messages.
+
+        Creates array of hashes that represent merkle tree based on messages 
+        passed in. Hashes are computed using SHA256.
+
+        Args:
+        messages: grouping of messages to be hashed and used as leaves of the
+        merkle tree
+
+        Return:
+        (List) containing all the hashes, where for parent at index i, it's left 
+        child is at index 2i + 1 and it's right child at index 2i + 2
+        """
         tree = [""] * MerkleTree._ARRAY_SIZE
         offset = MerkleTree._NUM_NODES - 1
         msg_in_row = (MerkleTree._ARRAY_SIZE + 1) // 2
@@ -30,9 +55,30 @@ class MerkleTree:
         return tree
 
     def get_merkle_root(self):
+        """
+        Returns the root hash of the tree, which is constructed from the hashes
+        of every other node in the tree.
+
+        Return:
+        (str) Root hash of merkle tree
+        """
         return self.tree[0]
 
     def verify_message(self, message, index):
+        """
+        Uses index to check if message matches tree or not.
+
+        Uses index of the message in the array that was passed into the 
+        tree constructor.
+
+        Args:
+        message (str): message to be verified
+        index (int): message's location in the array when tree constructed
+
+        Return:
+        True if hash matches, false otherwise. False implies message was 
+        altered.
+        """
         index += MerkleTree._NUM_NODES - 1
         depth = int(log(MerkleTree._ARRAY_SIZE + 1, 2))
 
