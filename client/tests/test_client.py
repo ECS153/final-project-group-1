@@ -164,7 +164,7 @@ def keys_dir():
 def message_dict(message: bytes, receiver: str, sender: str) -> dict:
     encrypted = encrypt(message, receiver)
     encoded_msg = b64encode(encrypted).decode()
-    return {'sender': sender, 'message': {receiver: encoded_msg}}
+    return {'sender': sender, 'message': encoded_msg}
 
 
 def message_in_list(message: Message, message_list: List[Message]) -> bool:
