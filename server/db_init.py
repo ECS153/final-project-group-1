@@ -30,9 +30,10 @@ c.execute('''CREATE TABLE users
 for user in users:
     h = sha256((user[2]+user[1]).encode()).hexdigest()
     print(h)
-    c.execute("INSERT INTO users (user, salt, hash)" +
-              f"VALUES ('{user[0]}', '{user[2]}', '{h}')")
+    c.execute("INSERT INTO users (user, salt, hash) VALUES (?, ?, ?)", (user[0], user[2], h))
 
 ## create message table
 c.execute('''CREATE TABLE messages
-             (sender text, recevier text, message text, isSent int, blk_idx int, merkle_idx int, sent int)''')
+             (sender text, receiver text, message text, isSent int, sent int)''')
+conn.commit()
+c.close()

@@ -102,9 +102,10 @@ class MerkleChainClientHandler(BaseHTTPRequestHandler):
     def authenticate_password(self, user, password):
         conn = sqlite3.connect("message.db")
         c = conn.cursor()
-
-        my_salt = c.execute("SELECT salt FROM users WHERE user=?", user)
-        my_hash = c.execute("SELECT hash FROM users WHERE user=?", user)
+        print("USER", user)
+        print("PASSWORD", password)
+        my_salt = c.execute("SELECT salt FROM users WHERE user=?", (user,)).fetchone()[0]
+        my_hash = c.execute("SELECT hash FROM users WHERE user=?", (user,)).fetchone()[0]
         c.close()
         conn.close()
 
@@ -126,7 +127,7 @@ class MerkleChainClientHandler(BaseHTTPRequestHandler):
         """
         r.send_response(200)
         r.end_headers()
-        user = r.headers['user_name']
+        user = r.headers['username']
         contact = r.headers['contact']
         unread = r.headers['contact']
         password = r.headers['password']
@@ -136,9 +137,9 @@ class MerkleChainClientHandler(BaseHTTPRequestHandler):
             return
 
         if unread:
-            response = self.get_unread_messages(user, contact)
+            response = r.get_unread_messages(user, contact)
         else:
-            response = self.get_history(user, contact)
+            response = r.get_history(user, contact)
 
         r.wfile.write(bytes(response, "utf8"))
 
@@ -170,7 +171,7 @@ class MerkleChainClientHandler(BaseHTTPRequestHandler):
             (:sender, :receiver, :message, :isSent, :sent)",
             {'sender': sender, 'receiver': receiver,
             'message': message, 'isSent': 0, 'sent': sent})
-        print("Printing what was inputting in the db: "+c.fetchall())
+        print("Printing what was inputting in the db: ", c.fetchall())
         conn.commit()
         conn.close()
 
