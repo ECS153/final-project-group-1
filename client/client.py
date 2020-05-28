@@ -1,15 +1,45 @@
+from base64 import b64decode, b64encode
 import logging
 from pathlib import Path
 from queue import Queue
 from threading import Event, Thread
-from typing import Callable
+from typing import Callable, List
 
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 import requests
+from requests import Response
 from requests.exceptions import ConnectionError
+
+
+class Message:
+    """
+    A byte message wrapper with some metadata.
+    """
+    def __init__(self, user_from: str, user_to: str, message: bytes):
+        self._from = user_from
+        self._to = user_to
+        self._messsage = message
+
+    @property
+    def message(self):
+        return self._messsage
+
+    @property
+    def user_from(self):
+        """
+        The username of the person sending the message.
+        """
+        return self._from
+
+    @property
+    def user_to(self):
+        """
+        The username of the person receiving the message.
+        """
+        return self._to
 
 
 class Client:
@@ -128,7 +158,7 @@ class Client:
             return None
         return key
 
-    def get_message(self, sender: str) -> bytes:
+    def get_messages(self, sender: str, unread: str = 'true') -> List[Message]:
         """
         Gets a message from the server.
 
@@ -138,9 +168,10 @@ class Client:
         Return:
         The message, or ``None`` if no message could be retrieved.
         """
-        headers = {'sender': self.user_name,
-                   'receiver': sender,
-                   'password': self.password}
+        headers = {'username': self.user_name,
+                   'contact': sender,
+                   'password': self.password,
+                   'unread': unread}
 
         try:
             response = requests.get(self.server_url, headers=headers)
@@ -155,13 +186,58 @@ class Client:
                                response.status_code)
             return
 
+        messages = self._response_to_messages(response)
+
+        return messages
+
+    def _message_to_request_body(self, message: bytes, receiver: str) -> dict:
+        """
+        Creates a HTTP put request body for sending a message.
+
+        Return:
+        The body, or None upon failure.
+        """
+        msg_encrypted = {}
         try:
-            decrypted = self._decrypt(response.content)
+            msg_encrypted[receiver] = self._encrypt(message, receiver)
+            msg_encrypted[self.user_name] = self._encrypt(message,
+                                                          self.user_name)
         except Exception as e:
-            self._logger.error('Failed to decrypt message. %s', e)
+            self._logger.error('Failed to encrypt message. %s', e)
             return None
 
-        return decrypted
+        body = {}
+        for username, msg in msg_encrypted.items():
+            body[username] = b64encode(msg).decode()
+
+        return body
+
+    def _response_to_messages(self, response: Response) -> List[Message]:
+        """
+        Parses the messages from an HTTP get response. Messages are ordered
+        from oldest to newest. The receiver is assumed to be the value of
+        ``self.user_name``.
+
+        Return:
+        A list of messages, or None upon failure.
+        """
+        try:
+            body = response.json()
+        except ValueError as e:
+            self._logger.error('Failed to parse JSON from response: %s', e)
+            return None
+
+        messages = []
+        for msg in body:
+            encrypted = b64decode(msg['message'][self.user_name].encode())
+            try:
+                decrypted = self._decrypt(encrypted)
+            except Exception as e:
+                self._logger.error('Failed to decrypt message. %s', e)
+                return None
+            messages.append(Message(msg['sender'], self.user_name, decrypted))
+
+        return messages
 
     def send_message(self, message: bytes, receiver: str) -> bool:
         """
@@ -178,14 +254,13 @@ class Client:
                    'receiver': receiver,
                    'password': self.password}
 
-        try:
-            msg_encrypted = self._encrypt(message, receiver)
-        except Exception as e:
-            self._logger.error('Failed to encrypt message. %s', e)
+        request_body = self._message_to_request_body(message, receiver)
+        if request_body is None:
+            self._logger.error('Failed to generate request body.')
             return False
 
         try:
-            response = requests.put(self.server_url, data=msg_encrypted,
+            response = requests.put(self.server_url, data=request_body,
                                     headers=headers)
         except ConnectionError as e:
             self._logger.error('Connection error: %s', e)
@@ -199,34 +274,6 @@ class Client:
             return False
 
         return True
-
-
-class Message:
-    """
-    A byte message wrapper with some metadata.
-    """
-    def __init__(self, user_from: str, user_to: str, message: bytes):
-        self._from = user_from
-        self._to = user_to
-        self._messsage = message
-
-    @property
-    def message(self):
-        return self._messsage
-
-    @property
-    def user_from(self):
-        """
-        The username of the person sending the message.
-        """
-        return self._from
-
-    @property
-    def user_to(self):
-        """
-        The username of the person receiving the message.
-        """
-        return self._to
 
 
 class AsyncClient(Client):
@@ -410,13 +457,14 @@ class ReceiverThread(QuittableThread):
 
             # Try to get a message.
             if user_from is None:
-                msg = None
+                msgs = []
             else:
-                msg = self._client.get_message(user_from)
+                msgs = self._client.get_messages(user_from)
+            if msgs is None:
+                msgs = []
 
-            # Process the message if there is one.
-            if msg is not None:
-                message = Message(user_from, self._client.user_name, msg)
+            # Process the messages if there are any.
+            for message in msgs:
                 self._queue.put(message)
                 if self.callback is not None:
                     self.callback()
@@ -457,24 +505,3 @@ class SenderThread(QuittableThread):
         """
         self._queue.put(message)
         self._event.set()
-
-
-def main():
-    logger_name = 'client'
-    log_level = logging.DEBUG
-    logger = logging.getLogger(logger_name)
-    logger.setLevel(log_level)
-    logging.basicConfig()
-
-    user = 'llee'
-    pwd = 'eell'
-    friend = 'llee'
-    message = '<message>'
-    client = Client('http://localhost:5001', user, pwd, logger_name)
-    client.send_message(message.encode(), friend)
-    incoming_msg = client.get_message(friend)
-    print('Received message: "{}"'.format(incoming_msg.decode()))
-
-
-if __name__ == '__main__':
-    main()
