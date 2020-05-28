@@ -229,7 +229,7 @@ class Client:
 
         messages = []
         for msg in body:
-            encrypted = b64decode(msg['message'][self.user_name].encode())
+            encrypted = b64decode(msg['message'].encode())
             try:
                 decrypted = self._decrypt(encrypted)
             except Exception as e:
