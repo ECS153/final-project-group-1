@@ -1,5 +1,6 @@
 from merkletree import MerkleTree
 from hashlib import sha256
+from hashgenerator import generate_hash
 
 class _node:
     """
@@ -34,19 +35,49 @@ class MerkleChain:
         self.latest_block_idx += 1
         return self.latest_block_idx
 
-    def get_latest_block_hash():
+    def get_latest_block_hash(self):
         """
         Constructs and returns SHA-256 hash of current leading node. 
         """
-        return sha256(self.last.prev_hash + 
-                      self.last.tree.getMerkleRoot() + 
-                      str(self.last.nonce))
+        return sha256((self.last.prev_hash + 
+                      self.last.tree.get_merkle_root() + 
+                      str(self.last.nonce)).encode()).hexdigest()
 
-#m = MerkleChain()
-#for i in range(0, 10):
-#    m.insert([str(i)], i+1)
+    def verify(self, msg, blk_idx, merk_idx):
+        """
+        Calls merkle tree's verify at blk_idx to see if message was altered
+        """
+        ## iterate to correct idx
+        if blk_idx > self.latest_block_idx or merk_idx > 7:
+            return False
+        node = self.first
+        for _ in range(0, blk_idx):
+            node = node.nxt
 
-#node = m.first
-#while node is not None:
-#    print(node.nonce)
-#    node = node.nxt
+        return node.tree.verify(msg, merk_idx)      
+
+
+def merkle_test():
+    m = MerkleChain()
+
+    b1 = ["Hey!", "Hi!", "How are ya?", "Not bad!", "Cool!", "School good?", "Yes!", "Aight Imma head out"]
+    b2 = ["My life is a lie", "The void grows bigger." ,"I smell pennies", "Hmmm yes", "Enslaved water?", "Yes indeed", "Big yums", "Lovely"]
+    b3 = ["Oof", "No", "Ah yes", "Ahhh no", "Big oofs", "No oofs here", "Stop", "go"]
+    blocks = [b1, b2, b3]
+    for i in range(0, len(blocks)):
+        ## cons nonce
+        prev_hash = m.get_latest_block_hash()
+        root = MerkleTree(blocks[i]).get_merkle_root()
+        nonce = generate_hash(prev_hash, root, 3)
+        ## add entry
+        m.insert(blocks[i], nonce)
+        assert m.latest_block_idx == i + 1
+        print(m.get_latest_block_hash())
+    
+    ## run some test cases against blocks
+    assert m.verify("Hey!", 1, 0)
+    assert not m.verify("Ah yes", 3, 1)
+    assert m.verify("Ah yes", 3, 2)
+    assert m.verify("The void grows bigger.", 2, 1)
+    assert m.verify("Aight Imma head out", 1, 7)
+    assert not m.verify("Oofie", 3, 0)
