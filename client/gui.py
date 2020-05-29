@@ -157,6 +157,9 @@ class GUI(tk.Frame):
         message = Message(self._client.user_name, self._to, msg)
         self._client.enqueue_message(message)
         self.input.delete(0, 'end')
+        label = tk.Label(self.messages_sub_frames[self._to].frame, anchor='e')
+        label['text'] = msg.decode()
+        label.pack(expand=0, fill='x', side='bottom')
 
 
 def parse_args():
