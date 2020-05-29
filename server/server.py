@@ -146,22 +146,14 @@ class MerkleChainClientHandler(BaseHTTPRequestHandler):
     def do_PUT(r):
         sender = r.headers["sender"]
         receiver = r.headers["receiver"]
-        message = str(r.rfile.read(int(r.headers["content-length"])))
+        message = r.rfile.read(int(r.headers["content-length"])).decode()
         print("Sender: "+sender)
         print("Receiver: "+receiver)
         print("Password: "+r.headers["password"])
         print("Message: "+message)
         
         ## clean JSON string, isolate messages
-        message = message.replace("=", "")
-        message = message.replace(receiver, "")
-        message = message.replace(" ", "")
-        message = message.replace(":", "")
-        message = message.replace('"', "")
-        message = message.replace(sender, "")
-        message = message.replace("{", "")
-        message = message.replace("}", "")
-        message = message.split(",")
+        message = list(json.loads(message).values())
         print("Split", message)
         r.send_response(200)
         r.end_headers()
