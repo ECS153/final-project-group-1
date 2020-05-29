@@ -138,7 +138,7 @@ class MerkleChainClientHandler(BaseHTTPRequestHandler):
         r.end_headers()
         user = r.headers['username']
         contact = r.headers['contact']
-        unread = r.headers['contact']
+        unread = r.headers['unread']
         password = r.headers['password']
 
         if not r.authenticate_password(user, password):
