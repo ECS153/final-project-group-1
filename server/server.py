@@ -33,9 +33,9 @@ class MerkleChainClientHandler(BaseHTTPRequestHandler):
         # turn data into list of dictionary
         for i in range(len(data)):
             data[i] = {
-                "timestamp": data[i][4],
+                "timestamp": data[i][3],
                 "sender": data[i][0],
-                "message": data[i][2]
+                "message": data[i][5]
             }
 
         # sort by timestamp ascending value
@@ -72,17 +72,26 @@ class MerkleChainClientHandler(BaseHTTPRequestHandler):
         c.execute(sql_read_query, (user, contact))
         data_user = c.fetchall()
 
+        #Make json for when user is the receiver
+        for i in range(len(data_user)):
+            data_user[i] = {
+                "timestamp": data_user[i][3],
+                "sender": data_user[i][0],
+                "message": data_user[i][5]
+            }
+
         c.execute(sql_read_query, (contact, user))
         data_contact = c.fetchall()
 
-        data = data_user + data_contact
-
-        for i in range(len(data)):
-            data[i] = {
-                "timestamp": data[i][4],
-                "sender": data[i][0],
-                "message": data[i][2]
+        #Make json for when user is the sender
+        for i in range(len(data_contact)):
+            data_contact[i] = {
+                "timestamp": data_contact[i][3],
+                "sender": data_contact[i][0],
+                "message": data_contact[i][4]
             }
+
+        data = data_user + data_contact
 
         length = len(data)
         j = 0
@@ -202,6 +211,7 @@ def main():
     """
     Instantiates server, runs it indefinitely.
     """
+
     server_address = ("", PORT)
     httpd = HTTPServer(server_address, MerkleChainClientHandler)
     httpd.serve_forever()
