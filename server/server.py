@@ -145,7 +145,7 @@ class MerkleChainClientHandler(BaseHTTPRequestHandler):
             print("Error: wrong password")
             return
 
-        if unread:
+        if unread != 'false':
             response = r.get_unread_messages(user, contact)
         else:
             response = r.get_history(user, contact)
